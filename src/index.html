@@ -1,21 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachfinder</title>
+    <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
 
-   <head itemscope itemtype="http://schema.org/WebSite">
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container header__container">
+            <h1 class="logo">Teachfinder</h1>
+            <form class="search-form" onsubmit="event.preventDefault();">
+                <input type="text" placeholder="Name, note or age to search" class="search-input">
+                <button type="submit" class="btn btn--primary">Search</button>
+            </form>
+        </div>
+    </header>
 
-      <meta charset="utf-8">
-      <meta http-equiv="x-ua-compatible" content="ie=edge">
-      <meta name="msapplication-tap-highlight" content="no">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Navigation & Filters Section -->
+    <nav class="nav-section">
+        <div class="container nav-container">
+            <ul class="main-menu">
+                <li><a href="#teachers" class="menu-link active">Teachers</a></li>
+                <li><a href="#statistics" class="menu-link">Statistics</a></li>
+                <li><a href="#favorites" class="menu-link">Favorites</a></li>
+                <li><a href="#about" class="menu-link">About</a></li>
+            </ul>
+            <button class="btn btn--outline" id="open-add-teacher-modal">Add teacher</button>
+        </div>
+    </nav>
 
-      <title>Project</title>
+    <!-- Main Content -->
+    <main class="container">
 
-      <link rel="stylesheet" href="./css/app.css">
+        <!-- Top Teachers Section -->
+        <section id="teachers" class="section">
+            <h2 class="section-title">Top Teachers</h2>
+            
+            <!-- Filters Bar -->
+            <div class="filters-bar">
+                <div class="filter-group">
+                    <label>Age</label>
+                    <select class="filter-select">
+                        <option value="">18-31</option>
+                        <option value="32-45">32-45</option>
+                        <option value="46+">46+</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Region</label>
+                    <select class="filter-select">
+                        <option value="">Europe</option>
+                        <option value="Americas">Americas</option>
+                        <option value="Asia">Asia</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Sex</label>
+                    <select class="filter-select">
+                        <option value="">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-checkbox">
+                    <input type="checkbox" id="only-photo">
+                    <label for="only-photo">Only with photo</label>
+                </div>
+                <div class="filter-group filter-checkbox">
+                    <input type="checkbox" id="only-favorites">
+                    <label for="only-favorites">Only favorites</label>
+                </div>
+            </div>
 
-   </head>
+            <div class="teachers-grid">
+                <!-- Каточки генерируются динамически через JS -->
+            </div>
+        </section>
 
-   <body itemscope itemtype="http://schema.org/WebPage">
-      <script type="text/javascript" src="./js/app.js"></script>
-      
-  </body>
+        <hr class="divider">
+
+        <!-- Statistics Section -->
+        <section id="statistics" class="section">
+            <h2 class="section-title">Statistics</h2>
+            <div class="table-responsive">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Name <span>↓</span></th>
+                            <th>Speciality</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Nationality</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <a href="#" class="active">1</a>
+                <a href="#">2</a>
+                <a href="#">3</a>
+                <span>...</span>
+                <a href="#">Last</a>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Favorites Section -->
+        <section id="favorites" class="section">
+            <h2 class="section-title">Favorites</h2>
+            <div class="carousel-wrapper">
+                <button class="carousel-btn carousel-btn--prev">&lang;</button>
+                <div class="favorites-carousel">
+                </div>
+                <button class="carousel-btn carousel-btn--next">&rang;</button>
+            </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- About Text Section -->
+        <section id="about" class="section about-section">
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A atque facere, hic impedit! Itaque molestiae sit tempore? Ea in militia natus rerum voluptates? Ea ex excepturi facere tempora. Aliquid asperiores hic impedit iusto natus quaerat ratione sit? Culpa iusto optio voluptas voluptate. Enim eveniet fugit iure meliores molestiae, praesentium quia.</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eligendi illum in inventore ipsum odio officiis omnis quisquam sed tempora?</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A atque esse expedita id iusto militia, odit sint ullam veritatis vero?</p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer__container">
+            <ul class="main-menu">
+                <li><a href="#teachers" class="menu-link">Teachers</a></li>
+                <li><a href="#statistics" class="menu-link">Statistics</a></li>
+                <li><a href="#favorites" class="menu-link">Favorites</a></li>
+                <li><a href="#about" class="menu-link">About</a></li>
+            </ul>
+            <button class="btn btn--outline" id="open-add-teacher-modal-footer">Add teacher</button>
+        </div>
+    </footer>
+
+    <!-- Modal 1: Teacher Info Popup -->
+    <div class="modal" id="modal-teacher-info">
+        <div class="modal__overlay" id="close-teacher-info-overlay"></div>
+        <div class="modal__content modal__content--teacher">
+            <div class="modal__header-dark">
+                <h3>Teacher Info</h3>
+                <button class="modal__close" id="close-teacher-info-btn">&times;</button>
+            </div>
+            <div class="modal-body-padding">
+                <div class="modal-teacher__header">
+                    <img src="" alt="Teacher" class="modal-teacher__avatar">
+                    <div class="modal-teacher__main-info">
+                        <div class="name-star-wrap">
+                            <h2 class="modal-teacher__name">Ihor Tkachuk</h2>
+                            <span class="modal-teacher__star">☆</span>
+                        </div>
+                        <p class="modal-teacher__subject">Chemistry</p>
+                        <p class="modal-teacher__meta modal-teacher__location">Kyiv, Ukraine</p>
+                        <p class="modal-teacher__meta modal-teacher__age-gender">35, Male</p>
+                        <p class="modal-teacher__email"><a href="mailto:ihor_tkachuk@domain.com">ihor_tkachuk@domain.com</a></p>
+                        <p class="modal-teacher__phone">+380964993252</p>
+                    </div>
+                </div>
+
+                <div class="modal-teacher__body">
+                    <p class="modal-teacher__description">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ab autem consectetur culpa cumque, distinctio dolor dolore doloremque ea explicabo facilis nam nesciunt nisi pariatur perspiciatis porro quis simillique temporibus veniam veritatis?
+                    </p>
+                    <a href="#" class="toggle-map-link">toggle map</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Add Teacher Popup -->
+    <div class="modal" id="modal-add-teacher">
+        <div class="modal__overlay" id="close-add-teacher-overlay"></div>
+        <div class="modal__content modal__content--form">
+            <div class="modal__header-dark">
+                <h3>Add Teacher</h3>
+                <button class="modal__close" id="close-add-teacher-btn">&times;</button>
+            </div>
+
+            <form class="add-teacher-form modal-body-padding" id="add-teacher-form">
+                <div class="form-group">
+                    <label for="teacher-name">Name</label>
+                    <input type="text" id="teacher-name" placeholder="Enter name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="teacher-speciality">Speciality</label>
+                    <select id="teacher-speciality" required>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Biology">Biology</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="teacher-country">Country</label>
+                        <select id="teacher-country" required>
+                            <option value="Ukraine">Ukraine</option>
+                            <option value="USA">USA</option>
+                            <option value="Germany">Germany</option>
+                            <option value="UK">UK</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacher-city">City</label>
+                        <input type="text" id="teacher-city">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="teacher-email">Email</label>
+                        <input type="email" id="teacher-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teacher-phone">Phone</label>
+                        <input type="tel" id="teacher-phone" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="teacher-dob">Date of birth</label>
+                    <input type="date" id="teacher-dob" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Sex</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="sex" value="Male" checked> Male</label>
+                        <label><input type="radio" name="sex" value="Female"> Female</label>
+                    </div>
+                </div>
+
+                <div class="form-group form-group--inline">
+                    <label for="teacher-color">Background color</label>
+                    <input type="color" id="teacher-color" value="#f75c4c">
+                </div>
+
+                <div class="form-group">
+                    <label for="teacher-notes">Notes (optional)</label>
+                    <textarea id="teacher-notes" rows="4"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn--outline btn--full btn--add-submit">Add</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+</body>
 </html>
