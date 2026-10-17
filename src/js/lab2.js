@@ -13,7 +13,7 @@ export function getFormattedTeachers() {
   const normalizedMock = randomUserMock.map((user) => {
     return {
       id: user.login?.uuid || user.id?.value || String(Math.random()),
-      gender: user.gender || null,
+      gender: user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : null,
       title: user.name?.title || null,
       full_name: `${user.name?.first || ''} ${user.name?.last || ''}`.trim(),
       city: user.location?.city || null,
@@ -42,10 +42,9 @@ export function getFormattedTeachers() {
   });
 
   const normalizedAdditional = additionalUsers.map((user) => {
-    const nameParts = (user.full_name || '').split(' ');
     return {
       id: user.id || String(Math.random()),
-      gender: user.gender || null,
+      gender: user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : null,
       title: user.title || null,
       full_name: user.full_name || null,
       city: user.city || null,
@@ -81,6 +80,7 @@ export function getFormattedTeachers() {
 
   return uniqueTeachers;
 }
+
 function calculateAge(bDayString) {
   const birthDate = new Date(bDayString);
   const diff = Date.now() - birthDate.getTime();
@@ -92,25 +92,19 @@ function calculateAge(bDayString) {
 export function validateTeacher(teacher) {
   if (typeof teacher !== 'object' || teacher === null) return false;
 
-
-  const stringFields = ['full_name', 'gender', 'note', 'state', 'city', 'country'];
-  for (const field of stringFields) {
-    const value = teacher[field];
-    if (value !== null && value !== undefined) {
-      if (typeof value !== 'string') return false;
-      if (value.length > 0 && value[0] !== value[0].toUpperCase()) return false;
-    }
-  }
-
+  // Перевірка рядкових полів
+  if (teacher.full_name && typeof teacher.full_name !== 'string') return false;
+  
   if (teacher.age !== null && teacher.age !== undefined) {
     if (typeof teacher.age !== 'number' || Number.isNaN(teacher.age)) return false;
   }
 
-  if (teacher.email !== null && teacher.email !== undefined) {
+  if (teacher.email !== null && teacher.email !== undefined && teacher.email !== '') {
     if (typeof teacher.email !== 'string' || !teacher.email.includes('@')) return false;
   }
 
-  if (teacher.phone !== null && teacher.phone !== undefined) {
+  // Виправлена регулярка для телефону (без /\$)
+  if (teacher.phone !== null && teacher.phone !== undefined && teacher.phone !== '') {
     if (typeof teacher.phone !== 'string') return false;
     const phoneRegex = /^[\d\s()+-]+\$/;
     if (!phoneRegex.test(teacher.phone)) return false;
@@ -119,11 +113,11 @@ export function validateTeacher(teacher) {
   return true;
 }
 
-// 3. Фільтрація масиву (Логічне "І")
+// 3. Фільтрація масиву
 export function filterTeachers(teachers, { country, age, gender, favorite } = {}) {
   return teachers.filter((teacher) => {
     if (country && teacher.country !== country) return false;
-    if (gender && teacher.gender !== gender) return false;
+    if (gender && (teacher.gender || '').toLowerCase() !== gender.toLowerCase()) return false;
     if (favorite !== undefined && teacher.favorite !== favorite) return false;
     
     if (age) {
@@ -142,9 +136,9 @@ export function filterTeachers(teachers, { country, age, gender, favorite } = {}
   });
 }
 
-// 4. Сортування
+// 4. Сортування (розширено список полів для таблиці)
 export function sortTeachers(teachers, field, order = 'asc') {
-  const allowedFields = ['full_name', 'age', 'b_day', 'country'];
+  const allowedFields = ['full_name', 'course', 'age', 'gender', 'b_day', 'country'];
   if (!allowedFields.includes(field)) return teachers;
 
   return [...teachers].sort((a, b) => {
@@ -168,21 +162,21 @@ export function sortTeachers(teachers, field, order = 'asc') {
   });
 }
 
-// 5. Пошук одного об'єкта
+// 5. Пошук (тепер повертає МАСИВ знайдених викладачів)
 export function findTeacher(teachers, query) {
-  if (!query && query !== 0) return null;
+  if (!query && query !== 0) return teachers;
   const searchStr = String(query).toLowerCase();
 
-  return teachers.find((teacher) => {
+  return teachers.filter((teacher) => {
     const nameMatch = teacher.full_name && teacher.full_name.toLowerCase().includes(searchStr);
     const noteMatch = teacher.note && teacher.note.toLowerCase().includes(searchStr);
     const ageMatch = teacher.age && String(teacher.age) === searchStr;
 
     return nameMatch || noteMatch || ageMatch;
-  }) || null;
+  });
 }
 
-// 6. Розрахунок відсотка за критерієм пошуку
+// 6. Розрахунок відсотка
 export function getTeacherPercentage(teachers, query) {
   if (!teachers || teachers.length === 0) return 0;
 
