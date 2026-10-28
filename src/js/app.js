@@ -1,356 +1,400 @@
-import { 
-  getFormattedTeachers, 
-  validateTeacher, 
-  filterTeachers, 
-  sortTeachers, 
-  findTeacher 
+import {
+  formatUser,
+  removeDuplicates,
+  getTeacherErrors,
+  sortTeachers,
+  findTeacher,
 } from './lab2.js';
-
-let allTeachers = getFormattedTeachers();
-let currentFilteredTeachers = [...allTeachers];
-let currentSortField = 'full_name';
-let currentSortOrder = 'asc';
-let selectedTeacherForModal = null;
+import {
+  fetchUsers, postTeacher, INITIAL_COUNT, PAGE_SIZE,
+} from './api.js';
 
 const COUNTRY_TO_REGION = {
-  
-  'Germany': 'Europe', 'Ukraine': 'Europe', 'UK': 'Europe', 'United Kingdom': 'Europe',
-  'France': 'Europe', 'Spain': 'Europe', 'Italy': 'Europe', 'Norway': 'Europe', 
-  'Denmark': 'Europe', 'Switzerland': 'Europe', 'Ireland': 'Europe', 'Finland': 'Europe',
-  'Turkey': 'Europe', 'Poland': 'Europe', 'Netherlands': 'Europe',
+  Germany: 'Europe',
+  Ukraine: 'Europe',
+  'United Kingdom': 'Europe',
+  UK: 'Europe',
+  France: 'Europe',
+  Spain: 'Europe',
+  Italy: 'Europe',
+  Norway: 'Europe',
+  Denmark: 'Europe',
+  Switzerland: 'Europe',
+  Ireland: 'Europe',
+  Finland: 'Europe',
+  Turkey: 'Europe',
+  Poland: 'Europe',
+  Netherlands: 'Europe',
+  Serbia: 'Europe',
 
-  'USA': 'Americas', 'United States': 'Americas', 'Canada': 'Americas', 
-  'Brazil': 'Americas', 'Mexico': 'Americas',
+  USA: 'Americas',
+  'United States': 'Americas',
+  Canada: 'Americas',
+  Brazil: 'Americas',
+  Mexico: 'Americas',
 
-  'India': 'Asia', 'China': 'Asia', 'Iran': 'Asia', 'Japan': 'Asia', 'South Korea': 'Asia',
+  India: 'Asia',
+  China: 'Asia',
+  Iran: 'Asia',
+  Japan: 'Asia',
+  'South Korea': 'Asia',
 
-  'Egypt': 'Africa', 'Nigeria': 'Africa',
-  'Australia': 'Oceania', 'New Zealand': 'Oceania'
+  Egypt: 'Africa',
+  Nigeria: 'Africa',
+
+  Australia: 'Oceania',
+  'New Zealand': 'Oceania',
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  initModals();
-  renderAll();
-  initFilters();
-  initSorting();
-  initSearch();
-  initAddTeacherForm();
-});
+const state = {
+  teachers: [],
+  fetchedCount: 0,
+  isLoading: false,
+  query: '',
+  filters: {
+    age: '', region: '', sex: '', onlyPhoto: false, onlyFavorites: false,
+  },
+  sort: { field: 'full_name', order: 'asc' },
+  selectedTeacher: null,
+};
 
-function renderAll() {
-  renderTeachers(currentFilteredTeachers);
-  renderFavorites(allTeachers);
-  renderTable(currentFilteredTeachers);
+const $ = (selector) => document.querySelector(selector);
+
+function escapeHtml(value) {
+  const div = document.createElement('div');
+  div.textContent = value ?? '';
+  return div.innerHTML;
 }
 
-// Відображення та додавання у Favorites
 function getInitials(name) {
   if (!name) return 'N/A';
-  return name.split(' ').map(n => n[0]).join('.').toUpperCase();
+  return name.split(' ').map((part) => part[0]).join('.').toUpperCase();
 }
 
-function renderTeachers(teachersList) {
-  const gridContainer = document.querySelector('.teachers-grid');
-  if (!gridContainer) return;
+// Дані: фільтрація / пошук
 
-  gridContainer.innerHTML = '';
-
-  teachersList.forEach(teacher => {
-    const card = document.createElement('div');
-    card.className = 'teacher-card';
-    card.style.cursor = 'pointer';
-
-    const starHtml = teacher.favorite ? '<span class="teacher-card__star">★</span>' : '';
-    const avatarHtml = teacher.picture_large
-      ? `<img src="${teacher.picture_large}" alt="${teacher.full_name}" class="teacher-card__avatar">`
-      : `<div class="teacher-card__initials" style="border-color:${teacher.bg_color || '#f75c4c'}">${getInitials(teacher.full_name)}</div>`;
-
-    card.innerHTML = `
-      <div class="teacher-card__avatar-wrap">
-        ${avatarHtml}
-        ${starHtml}
-      </div>
-      <h3 class="teacher-card__name">${teacher.full_name || 'No Name'}</h3>
-      <p class="teacher-card__subject">${teacher.course || 'General'}</p>
-      <p class="teacher-card__location">${teacher.country || 'Unknown'}</p>
-    `;
-
-    card.addEventListener('click', () => openTeacherInfoModal(teacher));
-    gridContainer.appendChild(card);
-  });
+function matchesAge(teacher, ageFilter) {
+  if (!ageFilter) return true;
+  if (ageFilter.endsWith('+')) return teacher.age >= Number(ageFilter.slice(0, -1));
+  const [min, max] = ageFilter.split('-').map(Number);
+  return teacher.age >= min && teacher.age <= max;
 }
 
-function renderFavorites(teachersList) {
-  const favoritesContainer = document.querySelector('.favorites-carousel');
-  if (!favoritesContainer) return;
-
-  favoritesContainer.innerHTML = '';
-  const favorites = teachersList.filter(t => t.favorite);
-
-  favorites.forEach(teacher => {
-    const card = document.createElement('div');
-    card.className = 'teacher-card';
-    card.style.cursor = 'pointer';
-
-    const avatarHtml = teacher.picture_large
-      ? `<img src="${teacher.picture_large}" alt="${teacher.full_name}" class="teacher-card__avatar">`
-      : `<div class="teacher-card__initials">${getInitials(teacher.full_name)}</div>`;
-
-    card.innerHTML = `
-      <div class="teacher-card__avatar-wrap">
-        ${avatarHtml}
-      </div>
-      <h3 class="teacher-card__name">${teacher.full_name || 'No Name'}</h3>
-      <p class="teacher-card__subject">${teacher.course || 'General'}</p>
-      <p class="teacher-card__location">${teacher.country || 'Unknown'}</p>
-    `;
-
-    card.addEventListener('click', () => openTeacherInfoModal(teacher));
-    favoritesContainer.appendChild(card);
-  });
+function matchesRegion(teacher, region) {
+  if (!region) return true;
+  return COUNTRY_TO_REGION[teacher.country] === region;
 }
 
-function openTeacherInfoModal(teacher) {
-  selectedTeacherForModal = teacher;
-  const infoModal = document.getElementById('modal-teacher-info');
-  if (!infoModal) return;
+// Список після фільтрів та пошуку (без сортування)
+function getVisibleTeachers() {
+  const { filters } = state;
 
-  const avatar = infoModal.querySelector('.modal-teacher__avatar');
-  const name = infoModal.querySelector('.modal-teacher__name');
-  const subject = infoModal.querySelector('.modal-teacher__subject');
-  const location = infoModal.querySelector('.modal-teacher__location');
-  const ageGender = infoModal.querySelector('.modal-teacher__age-gender');
-  const email = infoModal.querySelector('.modal-teacher__email');
-  const phone = infoModal.querySelector('.modal-teacher__phone');
-  const starBtn = document.getElementById('modal-star-btn');
-  const desc = infoModal.querySelector('.modal-teacher__description');
+  const filtered = state.teachers.filter((teacher) => matchesAge(teacher, filters.age)
+    && matchesRegion(teacher, filters.region)
+    && (!filters.sex || (teacher.gender || '').toLowerCase() === filters.sex)
+    && (!filters.onlyPhoto || Boolean(teacher.picture_large))
+    && (!filters.onlyFavorites || teacher.favorite));
 
-  if (avatar) avatar.src = teacher.picture_large || 'https://via.placeholder.com/140';
-  if (name) name.textContent = teacher.full_name || 'No Name';
-  if (subject) subject.textContent = teacher.course || 'General';
-  if (location) location.textContent = `${teacher.city || ''}, ${teacher.country || ''}`;
-  if (ageGender) ageGender.textContent = `${teacher.age || 'N/A'}, ${teacher.gender || 'N/A'}`;
-  if (email) email.innerHTML = teacher.email ? `<a href="mailto:${teacher.email}">${teacher.email}</a>` : 'N/A';
-  if (phone) phone.textContent = teacher.phone || 'N/A';
-  if (starBtn) starBtn.textContent = teacher.favorite ? '★' : '☆';
-  if (desc) desc.textContent = teacher.note || 'No notes available.';
-
-  infoModal.classList.add('is-open');
+  return findTeacher(filtered, state.query);
 }
 
-// Клік по зірочці у модальному вікні для перемикання Favorites
-document.getElementById('modal-star-btn')?.addEventListener('click', () => {
-  if (selectedTeacherForModal) {
-    selectedTeacherForModal.favorite = !selectedTeacherForModal.favorite;
-    document.getElementById('modal-star-btn').textContent = selectedTeacherForModal.favorite ? '★' : '☆';
-    renderAll();
-  }
-});
+// Рендер
 
-// Фільтрація
-function initFilters() {
-  const ageSelect = document.getElementById('filter-age');
-  const regionSelect = document.getElementById('filter-region');
-  const sexSelect = document.getElementById('filter-sex');
-  const onlyPhoto = document.getElementById('only-photo');
-  const onlyFavorites = document.getElementById('only-favorites');
+function createTeacherCard(teacher, { showStar = false } = {}) {
+  const card = document.createElement('div');
+  card.className = 'teacher-card';
+  card.style.cursor = 'pointer';
 
-  const applyFilters = () => {
-    let result = [...allTeachers];
+  const name = escapeHtml(teacher.full_name || 'No Name');
+  const avatarHtml = teacher.picture_large
+    ? `<img src="${escapeHtml(teacher.picture_large)}" alt="${name}" class="teacher-card__avatar">`
+    : `<div class="teacher-card__initials" style="border-color:${escapeHtml(teacher.bg_color || '#f75c4c')}">${escapeHtml(getInitials(teacher.full_name))}</div>`;
+  const starHtml = showStar && teacher.favorite ? '<span class="teacher-card__star">★</span>' : '';
 
-    if (ageSelect?.value) {
-      const [min, max] = ageSelect.value.split('-');
-      if (max) {
-        result = result.filter(t => t.age >= Number(min) && t.age <= Number(max));
-      } else if (ageSelect.value.includes('+')) {
-        const minAge = Number(ageSelect.value.replace('+', ''));
-        result = result.filter(t => t.age >= minAge);
-      }
-    }
+  card.innerHTML = `
+    <div class="teacher-card__avatar-wrap">
+      ${avatarHtml}
+      ${starHtml}
+    </div>
+    <h3 class="teacher-card__name">${name}</h3>
+    <p class="teacher-card__subject">${escapeHtml(teacher.course || 'General')}</p>
+    <p class="teacher-card__location">${escapeHtml(teacher.country || 'Unknown')}</p>
+  `;
 
-    if (regionSelect?.value) {
-      const selectedRegion = regionSelect.value.toLowerCase();
-      result = result.filter(t => {
-        const teacherRegion = COUNTRY_TO_REGION[t.country] || 'Europe'; // за замовчуванням Europe, якщо країни немає в списку
-        return teacherRegion.toLowerCase() === selectedRegion;
-      });
-    }
-
-    if (sexSelect?.value) {
-      result = result.filter(t => (t.gender || '').toLowerCase() === sexSelect.value.toLowerCase());
-    }
-
-    if (onlyPhoto?.checked) {
-      result = result.filter(t => Boolean(t.picture_large));
-    }
-
-    if (onlyFavorites?.checked) {
-      result = result.filter(t => Boolean(t.favorite));
-    }
-
-    currentFilteredTeachers = result;
-    renderTeachers(currentFilteredTeachers);
-    renderTable(currentFilteredTeachers);
-  };
-
-  [ageSelect, regionSelect, sexSelect, onlyPhoto, onlyFavorites].forEach(el => {
-    el?.addEventListener('change', applyFilters);
-  });
+  card.addEventListener('click', () => openTeacherInfoModal(teacher));
+  return card;
 }
 
-// Сортування таблиці
-function renderTable(teachersList) {
-  const tableBody = document.querySelector('.stats-table tbody');
-  if (!tableBody) return;
+function renderTeachers(teachers) {
+  const grid = $('.teachers-grid');
+  grid.innerHTML = '';
+  teachers.forEach((teacher) => grid.appendChild(createTeacherCard(teacher, { showStar: true })));
+}
 
+function renderFavorites() {
+  const carousel = $('.favorites-carousel');
+  carousel.innerHTML = '';
+  state.teachers
+    .filter((teacher) => teacher.favorite)
+    .forEach((teacher) => carousel.appendChild(createTeacherCard(teacher)));
+}
+
+function renderTable(teachers) {
+  const tableBody = $('.stats-table tbody');
   tableBody.innerHTML = '';
 
-  teachersList.forEach(teacher => {
+  sortTeachers(teachers, state.sort.field, state.sort.order).forEach((teacher) => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${teacher.full_name || 'N/A'}</td>
-      <td>${teacher.course || 'N/A'}</td>
-      <td>${teacher.age || 'N/A'}</td>
-      <td>${teacher.gender || 'N/A'}</td>
-      <td>${teacher.country || 'N/A'}</td>
+      <td>${escapeHtml(teacher.full_name || 'N/A')}</td>
+      <td>${escapeHtml(teacher.course || 'N/A')}</td>
+      <td>${escapeHtml(teacher.age ?? 'N/A')}</td>
+      <td>${escapeHtml(teacher.gender || 'N/A')}</td>
+      <td>${escapeHtml(teacher.country || 'N/A')}</td>
     `;
     tableBody.appendChild(row);
   });
 }
 
-function initSorting() {
-  const headers = document.querySelectorAll('.stats-table th[data-sort]');
-  headers.forEach(header => {
-    header.addEventListener('click', () => {
-      const field = header.getAttribute('data-sort');
+// Статистика рахується по тих даних, що зараз відображаються
+function renderStats(teachers) {
+  const ages = teachers.map((t) => t.age).filter((age) => typeof age === 'number');
+  const averageAge = ages.length
+    ? (ages.reduce((sum, age) => sum + age, 0) / ages.length).toFixed(1)
+    : '–';
+  const males = teachers.filter((t) => t.gender === 'Male').length;
+  const females = teachers.filter((t) => t.gender === 'Female').length;
+  const countries = new Set(teachers.map((t) => t.country).filter(Boolean)).size;
 
-      if (currentSortField === field) {
-        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        currentSortField = field;
-        currentSortOrder = 'asc';
-      }
+  $('#stats-summary').innerHTML = `
+    <span>Shown: <strong>${teachers.length}</strong> of ${state.teachers.length}</span>
+    <span>Average age: <strong>${averageAge}</strong></span>
+    <span>Male: <strong>${males}</strong></span>
+    <span>Female: <strong>${females}</strong></span>
+    <span>Countries: <strong>${countries}</strong></span>
+  `;
+}
 
-      headers.forEach(h => {
-        const icon = h.querySelector('.sort-icon');
-        if (icon) icon.textContent = '';
-      });
+function renderAll() {
+  const visible = getVisibleTeachers();
+  renderTeachers(visible);
+  renderTable(visible);
+  renderStats(visible);
+  renderFavorites();
+}
 
-      const icon = header.querySelector('.sort-icon');
-      if (icon) icon.textContent = currentSortOrder === 'asc' ? '↓' : '↑';
+// Модальне вікно викладача
 
-      currentFilteredTeachers = sortTeachers(currentFilteredTeachers, currentSortField, currentSortOrder);
-      renderTable(currentFilteredTeachers);
+function openTeacherInfoModal(teacher) {
+  state.selectedTeacher = teacher;
+  const modal = $('#modal-teacher-info');
+
+  modal.querySelector('.modal-teacher__avatar').src = teacher.picture_large || 'https://via.placeholder.com/140';
+  modal.querySelector('.modal-teacher__name').textContent = teacher.full_name || 'No Name';
+  modal.querySelector('.modal-teacher__subject').textContent = teacher.course || 'General';
+  modal.querySelector('.modal-teacher__location').textContent = [teacher.city, teacher.country].filter(Boolean).join(', ');
+  modal.querySelector('.modal-teacher__age-gender').textContent = `${teacher.age ?? 'N/A'}, ${teacher.gender || 'N/A'}`;
+  modal.querySelector('.modal-teacher__email').innerHTML = teacher.email
+    ? `<a href="mailto:${escapeHtml(teacher.email)}">${escapeHtml(teacher.email)}</a>`
+    : 'N/A';
+  modal.querySelector('.modal-teacher__phone').textContent = teacher.phone || 'N/A';
+  modal.querySelector('.modal-teacher__description').textContent = teacher.note || 'No notes available.';
+  $('#modal-star-btn').textContent = teacher.favorite ? '★' : '☆';
+
+  modal.classList.add('is-open');
+}
+
+function initFavoriteToggle() {
+  $('#modal-star-btn').addEventListener('click', () => {
+    const teacher = state.selectedTeacher;
+    if (!teacher) return;
+    teacher.favorite = !teacher.favorite;
+    $('#modal-star-btn').textContent = teacher.favorite ? '★' : '☆';
+    renderAll();
+  });
+}
+
+// Фільтри, сортування, пошук
+
+function initFilters() {
+  const controls = {
+    age: $('#filter-age'),
+    region: $('#filter-region'),
+    sex: $('#filter-sex'),
+    onlyPhoto: $('#only-photo'),
+    onlyFavorites: $('#only-favorites'),
+  };
+
+  Object.entries(controls).forEach(([key, element]) => {
+    element.addEventListener('change', () => {
+      state.filters[key] = element.type === 'checkbox' ? element.checked : element.value;
+      renderAll();
     });
   });
 }
 
-// Пошук
-function initSearch() {
-  const searchForm = document.getElementById('search-form');
-  const searchInput = document.getElementById('search-input');
+function initSorting() {
+  const headers = document.querySelectorAll('.stats-table th[data-sort]');
 
-  searchForm?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const query = searchInput?.value.trim().toLowerCase();
-    if (!query) {
-      currentFilteredTeachers = [...allTeachers];
-    } else {
-      currentFilteredTeachers = allTeachers.filter(t => {
-        const nameMatch = (t.full_name || '').toLowerCase().includes(query);
-        const noteMatch = (t.note || '').toLowerCase().includes(query);
-        const ageMatch = String(t.age) === query;
-        return nameMatch || noteMatch || ageMatch;
-      });
-    }
-    renderTeachers(currentFilteredTeachers);
-    renderTable(currentFilteredTeachers);
+  headers.forEach((header) => {
+    header.addEventListener('click', () => {
+      const field = header.dataset.sort;
+
+      if (state.sort.field === field) {
+        state.sort.order = state.sort.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort = { field, order: 'asc' };
+      }
+
+      headers.forEach((h) => { h.querySelector('.sort-icon').textContent = ''; });
+      header.querySelector('.sort-icon').textContent = state.sort.order === 'asc' ? '↓' : '↑';
+
+      renderAll();
+    });
   });
 }
 
-function id(name) {
-  return document.getElementById(name);
+function initSearch() {
+  $('#search-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    state.query = $('#search-input').value.trim();
+    renderAll();
+  });
+}
+
+// Завантаження даних з API та пагінація
+
+function setLoadMoreState({ loading, error = '' }) {
+  const button = $('#load-more');
+  button.disabled = loading;
+  button.textContent = loading ? 'Loading...' : 'Next';
+  const errorBox = $('#load-error');
+  errorBox.textContent = error;
+  errorBox.hidden = !error;
+}
+
+async function loadTeachers(count) {
+  if (state.isLoading) return;
+  state.isLoading = true;
+  setLoadMoreState({ loading: true });
+
+  try {
+    const users = await fetchUsers(count, state.fetchedCount);
+    state.fetchedCount += users.length;
+
+    const formatted = users
+      .map(formatUser)
+      .filter((teacher) => getTeacherErrors(teacher, { checkPhone: false }).length === 0);
+
+    state.teachers = removeDuplicates([...state.teachers, ...formatted]);
+    setLoadMoreState({ loading: false });
+    renderAll();
+  } catch (error) {
+    console.error(error);
+    setLoadMoreState({ loading: false, error: 'Could not load teachers. Please try again.' });
+  } finally {
+    state.isLoading = false;
+  }
+}
+
+function initPagination() {
+  $('#load-more').addEventListener('click', () => loadTeachers(PAGE_SIZE));
 }
 
 // Форма додавання викладача
+
+function calculateAge(dateString) {
+  const birth = new Date(dateString);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const hadBirthday = today.getMonth() > birth.getMonth()
+    || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if (!hadBirthday) age -= 1;
+  return age;
+}
+
+function readTeacherFromForm(form) {
+  const sex = form.querySelector('input[name="sex"]:checked')?.value || 'male';
+  const dob = $('#teacher-dob').value;
+
+  return {
+    id: String(Date.now()),
+    full_name: $('#teacher-name').value.trim(),
+    course: $('#teacher-speciality').value,
+    country: $('#teacher-country').value,
+    city: $('#teacher-city').value.trim() || null,
+    email: $('#teacher-email').value.trim(),
+    phone: $('#teacher-phone').value.trim(),
+    age: dob ? calculateAge(dob) : null,
+    b_day: dob,
+    gender: sex.charAt(0).toUpperCase() + sex.slice(1),
+    bg_color: $('#teacher-color').value,
+    note: $('#teacher-notes').value.trim() || null,
+    picture_large: null,
+    favorite: false,
+  };
+}
+
+function showFormErrors(errors) {
+  const box = $('#form-error');
+  box.innerHTML = errors.map((message) => `<div>${escapeHtml(message)}</div>`).join('');
+  box.hidden = errors.length === 0;
+}
+
 function initAddTeacherForm() {
-  const form = document.getElementById('add-teacher-form');
-  const addTeacherModal = document.getElementById('modal-add-teacher');
+  const form = $('#add-teacher-form');
 
-  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+    const teacher = readTeacherFromForm(form);
+    const errors = getTeacherErrors(teacher); // у формі телефон перевіряється суворо
+    showFormErrors(errors);
+    if (errors.length) return;
 
-    const nameVal = document.getElementById('teacher-name').value;
-    const dobVal = document.getElementById('teacher-dob').value;
-
-    let calculatedAge = 30;
-    if (dobVal) {
-      const birthYear = new Date(dobVal).getFullYear();
-      calculatedAge = new Date().getFullYear() - birthYear;
+    try {
+      const saved = await postTeacher(teacher);
+      state.teachers.unshift({ ...teacher, ...saved });
+    } catch (error) {
+      console.warn('json-server is unavailable, teacher was added locally only', error);
+      state.teachers.unshift(teacher);
     }
 
-    const selectedSex = form.querySelector('input[name="sex"]:checked')?.value || 'Male';
-    const formattedGender = selectedSex.charAt(0).toUpperCase() + selectedSex.slice(1);
-
-    const newTeacher = {
-      id: String(Date.now()),
-      full_name: nameVal,
-      course: document.getElementById('teacher-speciality').value,
-      country: document.getElementById('teacher-country').value,
-      city: document.getElementById('teacher-city').value || 'Unknown',
-      email: document.getElementById('teacher-email').value,
-      phone: document.getElementById('teacher-phone').value,
-      age: calculatedAge,
-      b_day: dobVal,
-      gender: formattedGender,
-      bg_color: document.getElementById('teacher-color').value,
-      note: document.getElementById('teacher-notes').value || '',
-      picture_large: null,
-      favorite: false
-    };
-
-    if (validateTeacher(newTeacher)) {
-      allTeachers.unshift(newTeacher);
-      currentFilteredTeachers.unshift(newTeacher);
-      renderAll();
-      form.reset();
-      if (addTeacherModal) addTeacherModal.classList.remove('is-open');
-    } else {
-      allTeachers.unshift(newTeacher);
-      currentFilteredTeachers.unshift(newTeacher);
-      renderAll();
-      form.reset();
-      if (addTeacherModal) addTeacherModal.classList.remove('is-open');
-    }
+    renderAll();
+    form.reset();
+    $('#modal-add-teacher').classList.remove('is-open');
   });
 }
+
+// Модальні вікна
 
 function initModals() {
-  const addTeacherBtns = [
-    document.getElementById('open-add-teacher-modal'),
-    document.getElementById('open-add-teacher-modal-footer')
-  ];
-  const addTeacherModal = document.getElementById('modal-add-teacher');
-  const closeAddBtn = document.getElementById('close-add-teacher-btn');
-  const closeAddOverlay = document.getElementById('close-add-teacher-overlay');
+  const addModal = $('#modal-add-teacher');
+  const infoModal = $('#modal-teacher-info');
 
-  addTeacherBtns.forEach(btn => {
-    if (btn && addTeacherModal) {
-      btn.addEventListener('click', () => addTeacherModal.classList.add('is-open'));
-    }
+  ['#open-add-teacher-modal', '#open-add-teacher-modal-footer'].forEach((selector) => {
+    $(selector).addEventListener('click', () => {
+      showFormErrors([]);
+      addModal.classList.add('is-open');
+    });
   });
 
-  const closeAddModal = () => addTeacherModal?.classList.remove('is-open');
-  if (closeAddBtn) closeAddBtn.addEventListener('click', closeAddModal);
-  if (closeAddOverlay) closeAddOverlay.addEventListener('click', closeAddModal);
+  ['#close-add-teacher-btn', '#close-add-teacher-overlay'].forEach((selector) => {
+    $(selector).addEventListener('click', () => addModal.classList.remove('is-open'));
+  });
 
-  const infoModal = document.getElementById('modal-teacher-info');
-  const closeInfoBtn = document.getElementById('close-teacher-info-btn');
-  const closeInfoOverlay = document.getElementById('close-teacher-info-overlay');
-
-  const closeInfoModal = () => infoModal?.classList.remove('is-open');
-  if (closeInfoBtn) closeInfoBtn.addEventListener('click', closeInfoModal);
-  if (closeInfoOverlay) closeInfoOverlay.addEventListener('click', closeInfoModal);
+  ['#close-teacher-info-btn', '#close-teacher-info-overlay'].forEach((selector) => {
+    $(selector).addEventListener('click', () => infoModal.classList.remove('is-open'));
+  });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  initModals();
+  initFilters();
+  initSorting();
+  initSearch();
+  initPagination();
+  initFavoriteToggle();
+  initAddTeacherForm();
+  loadTeachers(INITIAL_COUNT);
+});

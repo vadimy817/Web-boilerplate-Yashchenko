@@ -58,6 +58,7 @@
                         <option value="Americas">Americas</option>
                         <option value="Asia">Asia</option>
                         <option value="Africa">Africa</option>
+                        <option value="Oceania">Oceania</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -80,6 +81,11 @@
 
             <div class="teachers-grid">
             </div>
+
+            <div class="load-more">
+                <p class="load-error" id="load-error" hidden></p>
+                <button type="button" class="btn btn--outline" id="load-more">Next</button>
+            </div>
         </section>
 
         <hr class="divider">
@@ -87,6 +93,7 @@
         <!-- Statistics Section -->
         <section id="statistics" class="section">
             <h2 class="section-title">Statistics</h2>
+            <div class="stats-summary" id="stats-summary"></div>
             <div class="table-responsive">
                 <table class="stats-table">
                     <thead>
@@ -245,6 +252,8 @@
                     <label for="teacher-notes">Notes (optional)</label>
                     <textarea id="teacher-notes" rows="4"></textarea>
                 </div>
+
+                <div class="form-error" id="form-error" hidden></div>
 
                 <button type="submit" class="btn btn--outline btn--full btn--add-submit">Add</button>
             </form>
