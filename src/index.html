@@ -12,8 +12,8 @@
     <header class="header">
         <div class="container header__container">
             <h1 class="logo">Teachfinder</h1>
-            <form class="search-form" onsubmit="event.preventDefault();">
-                <input type="text" placeholder="Name, note or age to search" class="search-input">
+            <form class="search-form" id="search-form">
+                <input type="text" id="search-input" placeholder="Name, note or age to search" class="search-input">
                 <button type="submit" class="btn btn--primary">Search</button>
             </form>
         </div>
@@ -42,26 +42,30 @@
             <!-- Filters Bar -->
             <div class="filters-bar">
                 <div class="filter-group">
-                    <label>Age</label>
-                    <select class="filter-select">
-                        <option value="">18-31</option>
+                    <label for="filter-age">Age</label>
+                    <select class="filter-select" id="filter-age">
+                        <option value="">All</option>
+                        <option value="18-31">18-31</option>
                         <option value="32-45">32-45</option>
                         <option value="46+">46+</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Region</label>
-                    <select class="filter-select">
-                        <option value="">Europe</option>
+                    <label for="filter-region">Region</label>
+                    <select class="filter-select" id="filter-region">
+                        <option value="">All</option>
+                        <option value="Europe">Europe</option>
                         <option value="Americas">Americas</option>
                         <option value="Asia">Asia</option>
+                        <option value="Africa">Africa</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Sex</label>
-                    <select class="filter-select">
-                        <option value="">Male</option>
-                        <option value="Female">Female</option>
+                    <label for="filter-sex">Sex</label>
+                    <select class="filter-select" id="filter-sex">
+                        <option value="">All</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
                     </select>
                 </div>
                 <div class="filter-group filter-checkbox">
@@ -75,7 +79,6 @@
             </div>
 
             <div class="teachers-grid">
-                <!-- Каточки генерируются динамически через JS -->
             </div>
         </section>
 
@@ -88,23 +91,16 @@
                 <table class="stats-table">
                     <thead>
                         <tr>
-                            <th>Name <span>↓</span></th>
-                            <th>Speciality</th>
-                            <th>Age</th>
-                            <th>Gender</th>
-                            <th>Nationality</th>
+                            <th data-sort="full_name" style="cursor: pointer;">Name <span class="sort-icon">↓</span></th>
+                            <th data-sort="course" style="cursor: pointer;">Speciality <span class="sort-icon"></span></th>
+                            <th data-sort="age" style="cursor: pointer;">Age <span class="sort-icon"></span></th>
+                            <th data-sort="gender" style="cursor: pointer;">Gender <span class="sort-icon"></span></th>
+                            <th data-sort="country" style="cursor: pointer;">Nationality <span class="sort-icon"></span></th>
                         </tr>
                     </thead>
                     <tbody>
                     </tbody>
                 </table>
-            </div>
-            <div class="pagination">
-                <a href="#" class="active">1</a>
-                <a href="#">2</a>
-                <a href="#">3</a>
-                <span>...</span>
-                <a href="#">Last</a>
             </div>
         </section>
 
@@ -125,9 +121,7 @@
 
         <!-- About Text Section -->
         <section id="about" class="section about-section">
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A atque facere, hic impedit! Itaque molestiae sit tempore? Ea in militia natus rerum voluptates? Ea ex excepturi facere tempora. Aliquid asperiores hic impedit iusto natus quaerat ratione sit? Culpa iusto optio voluptas voluptate. Enim eveniet fugit iure meliores molestiae, praesentium quia.</p>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam eligendi illum in inventore ipsum odio officiis omnis quisquam sed tempora?</p>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A atque esse expedita id iusto militia, odit sint ullam veritatis vero?</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. A atque facere, hic impedit! Itaque molestiae sit tempore? Ea in militia natus rerum voluptates?</p>
         </section>
 
     </main>
@@ -145,7 +139,7 @@
         </div>
     </footer>
 
-    <!-- Modal 1: Teacher Info Popup -->
+    <!-- Teacher Info Popup -->
     <div class="modal" id="modal-teacher-info">
         <div class="modal__overlay" id="close-teacher-info-overlay"></div>
         <div class="modal__content modal__content--teacher">
@@ -158,28 +152,25 @@
                     <img src="" alt="Teacher" class="modal-teacher__avatar">
                     <div class="modal-teacher__main-info">
                         <div class="name-star-wrap">
-                            <h2 class="modal-teacher__name">Ihor Tkachuk</h2>
-                            <span class="modal-teacher__star">☆</span>
+                            <h2 class="modal-teacher__name"></h2>
+                            <span class="modal-teacher__star" id="modal-star-btn" style="cursor: pointer;">☆</span>
                         </div>
-                        <p class="modal-teacher__subject">Chemistry</p>
-                        <p class="modal-teacher__meta modal-teacher__location">Kyiv, Ukraine</p>
-                        <p class="modal-teacher__meta modal-teacher__age-gender">35, Male</p>
-                        <p class="modal-teacher__email"><a href="mailto:ihor_tkachuk@domain.com">ihor_tkachuk@domain.com</a></p>
-                        <p class="modal-teacher__phone">+380964993252</p>
+                        <p class="modal-teacher__subject"></p>
+                        <p class="modal-teacher__meta modal-teacher__location"></p>
+                        <p class="modal-teacher__meta modal-teacher__age-gender"></p>
+                        <p class="modal-teacher__email"></p>
+                        <p class="modal-teacher__phone"></p>
                     </div>
                 </div>
 
                 <div class="modal-teacher__body">
-                    <p class="modal-teacher__description">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ab autem consectetur culpa cumque, distinctio dolor dolore doloremque ea explicabo facilis nam nesciunt nisi pariatur perspiciatis porro quis simillique temporibus veniam veritatis?
-                    </p>
-                    <a href="#" class="toggle-map-link">toggle map</a>
+                    <p class="modal-teacher__description"></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal 2: Add Teacher Popup -->
+    <!-- Add Teacher Popup -->
     <div class="modal" id="modal-add-teacher">
         <div class="modal__overlay" id="close-add-teacher-overlay"></div>
         <div class="modal__content modal__content--form">
@@ -240,8 +231,8 @@
                 <div class="form-group">
                     <label>Sex</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="sex" value="Male" checked> Male</label>
-                        <label><input type="radio" name="sex" value="Female"> Female</label>
+                        <label><input type="radio" name="sex" value="male" checked> Male</label>
+                        <label><input type="radio" name="sex" value="female"> Female</label>
                     </div>
                 </div>
 
