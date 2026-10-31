@@ -541,3 +541,91 @@ body {
   margin-bottom: 16px;
   font-size: 15px;
 }
+
+/* Lab 5: sorting, charts, report, map */
+.filters-bar {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.stats-panel {
+  margin-bottom: 32px;
+}
+
+.stats-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stats-panel__title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.pie-wrap {
+  position: relative;
+  height: 320px;
+}
+
+.pie-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding-top: 120px;
+}
+
+.view-switch {
+  display: flex;
+}
+
+.view-switch__btn {
+  padding: 6px 16px;
+  border: 1px solid var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.view-switch__btn + .view-switch__btn {
+  border-left: none;
+}
+
+.view-switch__btn.is-active {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.modal__content--teacher {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-teacher__birthday {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.modal-teacher__map-block {
+  margin-bottom: 10px;
+}
+
+.modal-teacher__map {
+  height: 220px;
+  margin-top: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.modal-teacher__map-note {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+[hidden] {
+  display: none !important;
+}

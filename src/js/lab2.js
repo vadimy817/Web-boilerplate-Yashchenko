@@ -4,77 +4,111 @@ const COURSES = [
   'Law', 'Art', 'Medicine', 'Statistics',
 ];
 
+const COUNTRY_TO_REGION = {
+  Germany: 'Europe',
+  Ukraine: 'Europe',
+  'United Kingdom': 'Europe',
+  UK: 'Europe',
+  France: 'Europe',
+  Spain: 'Europe',
+  Italy: 'Europe',
+  Norway: 'Europe',
+  Denmark: 'Europe',
+  Switzerland: 'Europe',
+  Ireland: 'Europe',
+  Finland: 'Europe',
+  Turkey: 'Europe',
+  Poland: 'Europe',
+  Netherlands: 'Europe',
+  Serbia: 'Europe',
+
+  USA: 'Americas',
+  'United States': 'Americas',
+  Canada: 'Americas',
+  Brazil: 'Americas',
+  Mexico: 'Americas',
+
+  India: 'Asia',
+  China: 'Asia',
+  Iran: 'Asia',
+  Japan: 'Asia',
+  'South Korea': 'Asia',
+
+  Egypt: 'Africa',
+  Nigeria: 'Africa',
+
+  Australia: 'Oceania',
+  'New Zealand': 'Oceania',
+};
+
+const REQUIRED_STRING_FIELDS = { full_name: 'Name', course: 'Speciality', country: 'Country' };
+const SORTABLE_FIELDS = ['full_name', 'course', 'age', 'gender', 'b_day', 'country'];
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[\d\s().+-]{7,}$/;
 const MIN_AGE = 18;
 const MAX_AGE = 100;
 
-const getRandomCourse = () => COURSES[Math.floor(Math.random() * COURSES.length)];
+export const getRegion = (country) => COUNTRY_TO_REGION[country] || null;
 
-const capitalize = (str) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : null);
 
-// 1. Нормалізація користувача з відповіді randomuser.me до формату викладача
 export function formatUser(user) {
+  const pick = (path) => _.get(user, path) || null;
+
   return {
-    id: user.login?.uuid || user.id?.value || String(Math.random()),
-    gender: capitalize(user.gender),
-    title: user.name?.title || null,
-    full_name: `${user.name?.first || ''} ${user.name?.last || ''}`.trim(),
-    city: user.location?.city || null,
-    state: user.location?.state || null,
-    country: user.location?.country || null,
-    postcode: user.location?.postcode || null,
-    coordinates: user.location?.coordinates || null,
-    timezone: user.location?.timezone || null,
-    email: user.email || null,
-    b_day: user.dob?.date || null,
-    age: user.dob?.age ?? null,
-    phone: user.phone || null,
-    picture_large: user.picture?.large || null,
-    picture_thumbnail: user.picture?.thumbnail || null,
+    id: pick('login.uuid') || pick('id.value') || _.uniqueId('teacher-'),
+    gender: _.capitalize(pick('gender')) || null,
+    title: pick('name.title'),
+    full_name: _.compact([_.get(user, 'name.first'), _.get(user, 'name.last')]).join(' '),
+    city: pick('location.city'),
+    state: pick('location.state'),
+    country: pick('location.country'),
+    postcode: pick('location.postcode'),
+    coordinates: pick('location.coordinates'),
+    timezone: pick('location.timezone'),
+    email: pick('email'),
+    b_day: pick('dob.date'),
+    age: _.get(user, 'dob.age', null),
+    phone: pick('phone'),
+    picture_large: pick('picture.large'),
+    picture_thumbnail: pick('picture.thumbnail'),
     favorite: false,
-    course: getRandomCourse(),
+    course: _.sample(COURSES),
     bg_color: '#f75c4c',
     note: null,
   };
 }
 
-// Прибирає дублікати (за email або id)
 export function removeDuplicates(teachers) {
-  const seen = new Set();
-  return teachers.filter((teacher) => {
-    const key = teacher.email || teacher.id;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return _.uniqBy(teachers, (teacher) => teacher.email || teacher.id);
 }
 
-// 2. Валідація: повертає список помилок
+// Валідація
+
 export function getTeacherErrors(teacher, { checkPhone = true } = {}) {
-  if (typeof teacher !== 'object' || teacher === null) return ['Invalid teacher object'];
+  if (!_.isPlainObject(teacher)) return ['Invalid teacher object'];
 
   const errors = [];
-  const requiredStrings = { full_name: 'Name', course: 'Speciality', country: 'Country' };
 
-  Object.entries(requiredStrings).forEach(([field, label]) => {
-    if (typeof teacher[field] !== 'string' || !teacher[field].trim()) {
+  _.forEach(REQUIRED_STRING_FIELDS, (label, field) => {
+    if (!_.isString(teacher[field]) || _.isEmpty(_.trim(teacher[field]))) {
       errors.push(`${label} is required`);
     }
   });
 
-  if (teacher.city && typeof teacher.city !== 'string') errors.push('City must be a string');
+  if (!_.isNil(teacher.city) && !_.isString(teacher.city)) {
+    errors.push('City must be a string');
+  }
 
-  if (typeof teacher.age !== 'number' || Number.isNaN(teacher.age)
-    || teacher.age < MIN_AGE || teacher.age > MAX_AGE) {
+  if (!_.isFinite(teacher.age) || !_.inRange(teacher.age, MIN_AGE, MAX_AGE + 1)) {
     errors.push(`Age must be a number between ${MIN_AGE} and ${MAX_AGE}`);
   }
 
-  if (typeof teacher.email !== 'string' || !EMAIL_REGEX.test(teacher.email)) {
+  if (!_.isString(teacher.email) || !EMAIL_REGEX.test(teacher.email)) {
     errors.push('Email is not valid');
   }
 
-  if (checkPhone && (typeof teacher.phone !== 'string' || !PHONE_REGEX.test(teacher.phone))) {
+  if (checkPhone && (!_.isString(teacher.phone) || !PHONE_REGEX.test(teacher.phone))) {
     errors.push('Phone is not valid');
   }
 
@@ -82,95 +116,106 @@ export function getTeacherErrors(teacher, { checkPhone = true } = {}) {
 }
 
 export function validateTeacher(teacher, options) {
-  return getTeacherErrors(teacher, options).length === 0;
+  return _.isEmpty(getTeacherErrors(teacher, options));
 }
 
-// 3. Фільтрація масиву
+// 3. Фільтрація
+
+function createAgeMatcher(age) {
+  if (_.isNil(age) || age === '') return _.stubTrue;
+  if (_.isNumber(age)) return (value) => value === age;
+
+  if (_.endsWith(age, '+')) {
+    const min = Number(_.trimEnd(age, '+'));
+    return (value) => _.isNumber(value) && value >= min;
+  }
+
+  if (_.includes(age, '-')) {
+    const [min, max] = _.map(_.split(age, '-'), Number);
+    return (value) => _.isNumber(value) && _.inRange(value, min, max + 1);
+  }
+
+  return _.stubTrue;
+}
+
 export function filterTeachers(teachers, {
-  country, age, gender, favorite,
+  country, region, age, gender, favorite, withPhoto,
 } = {}) {
-  return teachers.filter((teacher) => {
-    if (country && teacher.country !== country) return false;
-    if (gender && (teacher.gender || '').toLowerCase() !== gender.toLowerCase()) return false;
-    if (favorite !== undefined && teacher.favorite !== favorite) return false;
+  const matchesAge = createAgeMatcher(age);
+  const genderLower = _.toLower(gender);
 
-    if (age) {
-      if (typeof age === 'number' && teacher.age !== age) return false;
-      if (typeof age === 'string' && age.includes('-')) {
-        const [min, max] = age.split('-').map(Number);
-        if (teacher.age < min || teacher.age > max) return false;
-      }
-      if (typeof age === 'string' && age.endsWith('+')) {
-        const min = Number(age.replace('+', ''));
-        if (teacher.age < min) return false;
-      }
-    }
-
-    return true;
-  });
+  return _.filter(teachers, (teacher) => (!country || teacher.country === country)
+    && (!region || getRegion(teacher.country) === region)
+    && (!gender || _.toLower(teacher.gender) === genderLower)
+    && (favorite === undefined || teacher.favorite === favorite)
+    && (!withPhoto || Boolean(teacher.picture_large))
+    && matchesAge(teacher.age));
 }
 
 // 4. Сортування
+
+function getSortValue(teacher, field) {
+  const value = teacher[field];
+  if (field === 'b_day') return Date.parse(value);
+  return _.isString(value) ? _.toLower(_.deburr(value)) : value;
+}
+
 export function sortTeachers(teachers, field, order = 'asc') {
-  const allowedFields = ['full_name', 'course', 'age', 'gender', 'b_day', 'country'];
-  if (!allowedFields.includes(field)) return teachers;
+  if (!_.includes(SORTABLE_FIELDS, field)) return teachers;
 
-  return [...teachers].sort((a, b) => {
-    let valA = a[field];
-    let valB = b[field];
+  const [withValue, withoutValue] = _.partition(teachers, (teacher) => !_.isNil(teacher[field]));
+  const sorted = _.orderBy(withValue, [(teacher) => getSortValue(teacher, field)], [order]);
 
-    if (valA === null || valA === undefined) return 1;
-    if (valB === null || valB === undefined) return -1;
-
-    if (field === 'b_day') {
-      valA = new Date(valA).getTime();
-      valB = new Date(valB).getTime();
-    }
-
-    if (typeof valA === 'string') {
-      const comparison = valA.localeCompare(valB);
-      return order === 'asc' ? comparison : -comparison;
-    }
-
-    return order === 'asc' ? valA - valB : valB - valA;
-  });
+  return [...sorted, ...withoutValue];
 }
 
-// 5. Пошук (повертає масив знайдених викладачів)
+// 5. Пошук
+
 export function findTeacher(teachers, query) {
-  if (!query && query !== 0) return teachers;
-  const searchStr = String(query).toLowerCase();
+  if (_.isNil(query) || query === '') return teachers;
+  const searchStr = _.toLower(String(query));
 
-  return teachers.filter((teacher) => {
-    const nameMatch = teacher.full_name && teacher.full_name.toLowerCase().includes(searchStr);
-    const noteMatch = teacher.note && teacher.note.toLowerCase().includes(searchStr);
-    const ageMatch = teacher.age && String(teacher.age) === searchStr;
-
-    return nameMatch || noteMatch || ageMatch;
-  });
+  return _.filter(teachers, (teacher) => _.includes(_.toLower(teacher.full_name), searchStr)
+    || _.includes(_.toLower(teacher.note), searchStr)
+    || (_.isNumber(teacher.age) && String(teacher.age) === searchStr));
 }
 
-// 6. Розрахунок відсотка
+// Відсоток викладачів за запитом
+
 export function getTeacherPercentage(teachers, query) {
-  if (!teachers || teachers.length === 0) return 0;
+  if (_.isEmpty(teachers)) return 0;
 
-  const searchStr = String(query).toLowerCase();
+  const searchStr = _.toLower(String(query));
+  const isString = _.isString(query);
 
-  const matchingCount = teachers.filter((teacher) => {
-    const nameMatch = teacher.full_name && teacher.full_name.toLowerCase().includes(searchStr);
-    const noteMatch = teacher.note && teacher.note.toLowerCase().includes(searchStr);
+  const matchesAge = (age) => {
+    if (isString && _.startsWith(query, '>')) return age > Number(query.slice(1));
+    if (isString && _.startsWith(query, '<')) return age < Number(query.slice(1));
+    return _.isNumber(age) && String(age) === searchStr;
+  };
 
-    let ageMatch = false;
-    if (typeof query === 'string' && query.startsWith('>')) {
-      ageMatch = teacher.age > Number(query.slice(1));
-    } else if (typeof query === 'string' && query.startsWith('<')) {
-      ageMatch = teacher.age < Number(query.slice(1));
-    } else {
-      ageMatch = teacher.age && String(teacher.age) === searchStr;
-    }
+  const matchingCount = _.countBy(teachers, (teacher) => (
+    _.includes(_.toLower(teacher.full_name), searchStr)
+    || _.includes(_.toLower(teacher.note), searchStr)
+    || matchesAge(teacher.age)
+  )).true || 0;
 
-    return nameMatch || noteMatch || ageMatch;
-  }).length;
+  return _.round((matchingCount / teachers.length) * 100);
+}
 
-  return Math.round((matchingCount / teachers.length) * 100);
+// Дати
+
+export function calculateAge(birthDate) {
+  return dayjs().diff(dayjs(birthDate), 'year');
+}
+
+export function getDaysUntilBirthday(birthDate, now = dayjs()) {
+  const birth = dayjs(String(birthDate).slice(0, 10));
+  if (!birthDate || !birth.isValid()) return null;
+
+  const today = now.startOf('day');
+  let next = birth.year(today.year());
+  if (next.isBefore(today)) next = birth.year(today.year() + 1);
+
+  return next.diff(today, 'day');
 }
