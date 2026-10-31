@@ -1,125 +1,99 @@
-import { randomUserMock, additionalUsers } from './FE4U-Lab2-mock.js';
-
 const COURSES = [
-  'Mathematics', 'Physics', 'English', 'Computer Science', 
-  'Dancing', 'Chess', 'Biology', 'Chemistry', 
-  'Law', 'Art', 'Medicine', 'Statistics'
+  'Mathematics', 'Physics', 'English', 'Computer Science',
+  'Dancing', 'Chess', 'Biology', 'Chemistry',
+  'Law', 'Art', 'Medicine', 'Statistics',
 ];
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[\d\s().+-]{7,}$/;
+const MIN_AGE = 18;
+const MAX_AGE = 100;
 
 const getRandomCourse = () => COURSES[Math.floor(Math.random() * COURSES.length)];
 
-// 1. Нормалізація та об'єднання даних
-export function getFormattedTeachers() {
-  const normalizedMock = randomUserMock.map((user) => {
-    return {
-      id: user.login?.uuid || user.id?.value || String(Math.random()),
-      gender: user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : null,
-      title: user.name?.title || null,
-      full_name: `${user.name?.first || ''} ${user.name?.last || ''}`.trim(),
-      city: user.location?.city || null,
-      state: user.location?.state || null,
-      country: user.location?.country || null,
-      postcode: user.location?.postcode || null,
-      coordinates: user.location?.coordinates ? {
-        latitude: user.location.coordinates.latitude,
-        longitude: user.location.coordinates.longitude
-      } : null,
-      timezone: user.location?.timezone ? {
-        offset: user.location.timezone.offset,
-        description: user.location.timezone.description
-      } : null,
-      email: user.email || null,
-      b_day: user.dob?.date || null,
-      age: user.dob?.age || null,
-      phone: user.phone || null,
-      picture_large: user.picture?.large || null,
-      picture_thumbnail: user.picture?.thumbnail || null,
-      favorite: false,
-      course: getRandomCourse(),
-      bg_color: '#f75c4c',
-      note: null
-    };
-  });
+const capitalize = (str) => (str ? str.charAt(0).toUpperCase() + str.slice(1) : null);
 
-  const normalizedAdditional = additionalUsers.map((user) => {
-    return {
-      id: user.id || String(Math.random()),
-      gender: user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : null,
-      title: user.title || null,
-      full_name: user.full_name || null,
-      city: user.city || null,
-      state: user.state || null,
-      country: user.country || null,
-      postcode: user.postcode || null,
-      coordinates: user.coordinates || null,
-      timezone: user.timezone || null,
-      email: user.email || null,
-      b_day: user.b_day || null,
-      age: user.b_day ? calculateAge(user.b_day) : null,
-      phone: user.phone || null,
-      picture_large: user.picture_large || null,
-      picture_thumbnail: user.picture_thumbnail || null,
-      favorite: Boolean(user.favorite),
-      course: user.course || getRandomCourse(),
-      bg_color: user.bg_color || '#f75c4c',
-      note: user.note || null
-    };
-  });
+// 1. Нормалізація користувача з відповіді randomuser.me до формату викладача
+export function formatUser(user) {
+  return {
+    id: user.login?.uuid || user.id?.value || String(Math.random()),
+    gender: capitalize(user.gender),
+    title: user.name?.title || null,
+    full_name: `${user.name?.first || ''} ${user.name?.last || ''}`.trim(),
+    city: user.location?.city || null,
+    state: user.location?.state || null,
+    country: user.location?.country || null,
+    postcode: user.location?.postcode || null,
+    coordinates: user.location?.coordinates || null,
+    timezone: user.location?.timezone || null,
+    email: user.email || null,
+    b_day: user.dob?.date || null,
+    age: user.dob?.age ?? null,
+    phone: user.phone || null,
+    picture_large: user.picture?.large || null,
+    picture_thumbnail: user.picture?.thumbnail || null,
+    favorite: false,
+    course: getRandomCourse(),
+    bg_color: '#f75c4c',
+    note: null,
+  };
+}
 
-  const combined = [...normalizedMock, ...normalizedAdditional];
-  const uniqueTeachers = [];
-  const seenIdentifiers = new Set();
-
-  for (const teacher of combined) {
+// Прибирає дублікати (за email або id)
+export function removeDuplicates(teachers) {
+  const seen = new Set();
+  return teachers.filter((teacher) => {
     const key = teacher.email || teacher.id;
-    if (!seenIdentifiers.has(key)) {
-      seenIdentifiers.add(key);
-      uniqueTeachers.push(teacher);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// 2. Валідація: повертає список помилок
+export function getTeacherErrors(teacher, { checkPhone = true } = {}) {
+  if (typeof teacher !== 'object' || teacher === null) return ['Invalid teacher object'];
+
+  const errors = [];
+  const requiredStrings = { full_name: 'Name', course: 'Speciality', country: 'Country' };
+
+  Object.entries(requiredStrings).forEach(([field, label]) => {
+    if (typeof teacher[field] !== 'string' || !teacher[field].trim()) {
+      errors.push(`${label} is required`);
     }
+  });
+
+  if (teacher.city && typeof teacher.city !== 'string') errors.push('City must be a string');
+
+  if (typeof teacher.age !== 'number' || Number.isNaN(teacher.age)
+    || teacher.age < MIN_AGE || teacher.age > MAX_AGE) {
+    errors.push(`Age must be a number between ${MIN_AGE} and ${MAX_AGE}`);
   }
 
-  return uniqueTeachers;
+  if (typeof teacher.email !== 'string' || !EMAIL_REGEX.test(teacher.email)) {
+    errors.push('Email is not valid');
+  }
+
+  if (checkPhone && (typeof teacher.phone !== 'string' || !PHONE_REGEX.test(teacher.phone))) {
+    errors.push('Phone is not valid');
+  }
+
+  return errors;
 }
 
-function calculateAge(bDayString) {
-  const birthDate = new Date(bDayString);
-  const diff = Date.now() - birthDate.getTime();
-  const ageDate = new Date(diff);
-  return Math.abs(ageDate.getUTCFullYear() - 1970);
-}
-
-// 2. Валідація об'єкта викладача
-export function validateTeacher(teacher) {
-  if (typeof teacher !== 'object' || teacher === null) return false;
-
-  // Перевірка рядкових полів
-  if (teacher.full_name && typeof teacher.full_name !== 'string') return false;
-  
-  if (teacher.age !== null && teacher.age !== undefined) {
-    if (typeof teacher.age !== 'number' || Number.isNaN(teacher.age)) return false;
-  }
-
-  if (teacher.email !== null && teacher.email !== undefined && teacher.email !== '') {
-    if (typeof teacher.email !== 'string' || !teacher.email.includes('@')) return false;
-  }
-
-  // Виправлена регулярка для телефону (без /\$)
-  if (teacher.phone !== null && teacher.phone !== undefined && teacher.phone !== '') {
-    if (typeof teacher.phone !== 'string') return false;
-    const phoneRegex = /^[\d\s()+-]+\$/;
-    if (!phoneRegex.test(teacher.phone)) return false;
-  }
-
-  return true;
+export function validateTeacher(teacher, options) {
+  return getTeacherErrors(teacher, options).length === 0;
 }
 
 // 3. Фільтрація масиву
-export function filterTeachers(teachers, { country, age, gender, favorite } = {}) {
+export function filterTeachers(teachers, {
+  country, age, gender, favorite,
+} = {}) {
   return teachers.filter((teacher) => {
     if (country && teacher.country !== country) return false;
     if (gender && (teacher.gender || '').toLowerCase() !== gender.toLowerCase()) return false;
     if (favorite !== undefined && teacher.favorite !== favorite) return false;
-    
+
     if (age) {
       if (typeof age === 'number' && teacher.age !== age) return false;
       if (typeof age === 'string' && age.includes('-')) {
@@ -136,7 +110,7 @@ export function filterTeachers(teachers, { country, age, gender, favorite } = {}
   });
 }
 
-// 4. Сортування (розширено список полів для таблиці)
+// 4. Сортування
 export function sortTeachers(teachers, field, order = 'asc') {
   const allowedFields = ['full_name', 'course', 'age', 'gender', 'b_day', 'country'];
   if (!allowedFields.includes(field)) return teachers;
@@ -162,7 +136,7 @@ export function sortTeachers(teachers, field, order = 'asc') {
   });
 }
 
-// 5. Пошук (тепер повертає МАСИВ знайдених викладачів)
+// 5. Пошук (повертає масив знайдених викладачів)
 export function findTeacher(teachers, query) {
   if (!query && query !== 0) return teachers;
   const searchStr = String(query).toLowerCase();
@@ -185,14 +159,12 @@ export function getTeacherPercentage(teachers, query) {
   const matchingCount = teachers.filter((teacher) => {
     const nameMatch = teacher.full_name && teacher.full_name.toLowerCase().includes(searchStr);
     const noteMatch = teacher.note && teacher.note.toLowerCase().includes(searchStr);
-    
+
     let ageMatch = false;
     if (typeof query === 'string' && query.startsWith('>')) {
-      const minAge = Number(query.slice(1));
-      ageMatch = teacher.age > minAge;
+      ageMatch = teacher.age > Number(query.slice(1));
     } else if (typeof query === 'string' && query.startsWith('<')) {
-      const maxAge = Number(query.slice(1));
-      ageMatch = teacher.age < maxAge;
+      ageMatch = teacher.age < Number(query.slice(1));
     } else {
       ageMatch = teacher.age && String(teacher.age) === searchStr;
     }
