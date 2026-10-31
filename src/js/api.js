@@ -14,7 +14,6 @@ async function requestJson(url, options) {
   return response.json();
 }
 
-
 export async function fetchUsers(count, offset = 0) {
   const page = Math.floor(offset / count) + 1;
   const url = `${RANDOM_USER_URL}?results=${count}&page=${page}&seed=${SEED}`;

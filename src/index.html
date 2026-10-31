@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teachfinder</title>
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="/vendor/webdatarocks/webdatarocks.min.css">
     <link rel="stylesheet" href="./css/app.css">
 </head>
 <body>
@@ -69,6 +71,21 @@
                         <option value="female">Female</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="sort-field">Sort by</label>
+                    <select class="filter-select" id="sort-field">
+                        <option value="">Default</option>
+                        <option value="full_name">Name</option>
+                        <option value="course">Speciality</option>
+                        <option value="age">Age</option>
+                        <option value="country">Country</option>
+                        <option value="b_day">Date of birth</option>
+                    </select>
+                    <select class="filter-select" id="sort-order" aria-label="Sort order">
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                </div>
                 <div class="filter-group filter-checkbox">
                     <input type="checkbox" id="only-photo">
                     <label for="only-photo">Only with photo</label>
@@ -94,20 +111,32 @@
         <section id="statistics" class="section">
             <h2 class="section-title">Statistics</h2>
             <div class="stats-summary" id="stats-summary"></div>
-            <div class="table-responsive">
-                <table class="stats-table">
-                    <thead>
-                        <tr>
-                            <th data-sort="full_name" style="cursor: pointer;">Name <span class="sort-icon">↓</span></th>
-                            <th data-sort="course" style="cursor: pointer;">Speciality <span class="sort-icon"></span></th>
-                            <th data-sort="age" style="cursor: pointer;">Age <span class="sort-icon"></span></th>
-                            <th data-sort="gender" style="cursor: pointer;">Gender <span class="sort-icon"></span></th>
-                            <th data-sort="country" style="cursor: pointer;">Nationality <span class="sort-icon"></span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+
+            <div class="stats-panel">
+                <div class="stats-panel__header">
+                    <h3 class="stats-panel__title">Teachers by</h3>
+                    <select class="filter-select" id="pie-group">
+                        <option value="course">Speciality</option>
+                        <option value="gender">Gender</option>
+                        <option value="country">Country</option>
+                        <option value="age">Age group</option>
+                    </select>
+                </div>
+                <div class="pie-wrap">
+                    <canvas id="pie-chart"></canvas>
+                    <p class="pie-empty" id="pie-empty" hidden>No teachers to show</p>
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stats-panel__header">
+                    <h3 class="stats-panel__title">Report (all loaded teachers)</h3>
+                    <div class="view-switch">
+                        <button type="button" class="view-switch__btn is-active" data-view="country">By country</button>
+                        <button type="button" class="view-switch__btn" data-view="flat">All teachers</button>
+                    </div>
+                </div>
+                <div id="wdr-component"></div>
             </div>
         </section>
 
@@ -167,6 +196,15 @@
                         <p class="modal-teacher__meta modal-teacher__age-gender"></p>
                         <p class="modal-teacher__email"></p>
                         <p class="modal-teacher__phone"></p>
+                        <p class="modal-teacher__birthday" id="modal-birthday"></p>
+                    </div>
+                </div>
+
+                <div class="modal-teacher__map-block">
+                    <p class="modal-teacher__map-note" id="teacher-map-note" hidden>Location is not available for this teacher.</p>
+                    <div id="teacher-map-wrapper">
+                        <a href="#" class="toggle-map-link" id="toggle-map">toggle map</a>
+                        <div class="modal-teacher__map" id="teacher-map"></div>
                     </div>
                 </div>
 
@@ -260,6 +298,12 @@
         </div>
     </div>
 
+    <script src="/vendor/lodash/lodash.min.js"></script>
+    <script src="/vendor/dayjs/dayjs.min.js"></script>
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script src="/vendor/chart.js/chart.umd.min.js"></script>
+    <script src="/vendor/webdatarocks/webdatarocks.toolbar.min.js"></script>
+    <script src="/vendor/webdatarocks/webdatarocks.js"></script>
     <script type="module" src="./js/app.js"></script>
 </body>
 </html>
